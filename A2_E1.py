@@ -131,15 +131,13 @@ def CosineSim(query, allVectors):
 def part1 (query,topic_id,resultFile):
     print("start of part1")
     queryResults = corpusInvertedIndex.rankedRetrieval(query)#get all match scores and what tweet IDs they are connected to
-    queryResults = queryResults[:10]
+    queryResults = queryResults[:1000]
     # trim list to 1000 results
 
     print("traversing dictionary")
     queryResultsTweetList = []
     for i in range(len(queryResults)):
         queryResultsTweetList.append((tweetDict[queryResults[i][0]],queryResults[i][0]))
-    print(str(len(queryResultsTweetList)))
-    print(str(len(queryResults)))
     print("starting bert model")
     vectors = bert(query, queryResultsTweetList)
     print("starting bert model")
