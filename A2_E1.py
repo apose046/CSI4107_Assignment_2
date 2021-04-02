@@ -25,6 +25,9 @@ stopWordsList.columns = ["words"]#set column name
 data.columns = ["tweetID", "tweet"]#set column names
 tweetList = data.loc[:,"tweet"]#create token array
 tweetID = data.loc[:,"tweetID"]#create tweet ID
+tweetDict = {}
+for i in range(len(tweetID)):
+    tweetDict[tweetID[i]]= tweetList[i]
 stops = stopWordsList.loc[:,"words"]#create stopword array
 
 tokenArray = []
@@ -101,7 +104,7 @@ def WriteDownResults(query,topic_id,resultFile):
     # queryResults = corpusInvertedIndex.rankedRetrieval(query)#get all match scores and what tweet IDs they are connected to
     # trim list to 1000 results
     
-    smallTweetList, smallTweetID = reduceTweetListSize(query, tweetList, tweetID,3000)
+    smallTweetList, smallTweetID = reduceTweetListSize(query, tweetList, tweetID, 3000)
     vectors = bert(query, smallTweetList)
     qVect = vectors[0]
     vectToup = []
@@ -109,14 +112,13 @@ def WriteDownResults(query,topic_id,resultFile):
     #print(len(vectors))
     for i in range(len(smallTweetID)-1):
         vectToup.append((smallTweetID[i],vectors[i+1]))
-    # queryResults = CosineSim(vectors[0],(tweetID,vectors[1:]))
     queryResults = CosineSim(vectors[0],vectToup)
 
     counter=0
     for (theTweetID,score) in queryResults:
         counter+=1
-        topic_id, Q0, docno, rank, sim, tag = topic_id, "Q0", score, counter, theTweetID, "myTag"#setting all variables
-        resultFile.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(topic_id, Q0, docno, rank, sim, tag))#formating and writing to file
+        topic_id, Q0, docno, rank, score, tag = topic_id, "Q0", theTweetID, counter, score, "myTag"#setting all variables
+        resultFile.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(topic_id, Q0, docno, rank, score, tag))#formating and writing to file
     resultFile.write("\n\n")
 
 def CosineSim(query, allVectors):
@@ -126,7 +128,33 @@ def CosineSim(query, allVectors):
         CosinesSimValues.append((np.dot(pair[1], query)/(np.linalg.norm(pair[1])*np.linalg.norm(query)),pair[0]))
     return CosinesSimValues
 
+def part1 (query,topic_id,resultFile):
+    print("start of part1")
+    queryResults = corpusInvertedIndex.rankedRetrieval(query)#get all match scores and what tweet IDs they are connected to
+    queryResults = queryResults[:10]
+    # trim list to 1000 results
 
+    print("traversing dictionary")
+    queryResultsTweetList = []
+    for i in range(len(queryResults)):
+        queryResultsTweetList.append((tweetDict[queryResults[i][0]],queryResults[i][0]))
+    print(str(len(queryResultsTweetList)))
+    print(str(len(queryResults)))
+    print("starting bert model")
+    vectors = bert(query, queryResultsTweetList)
+    print("starting bert model")
+    qVect = vectors[0]
+    vectToup = []
+    for i in range(len(queryResultsTweetList)-1):
+        vectToup.append((queryResultsTweetList[i],vectors[i+1]))
+    queryResults = CosineSim(vectors[0],vectToup)
+
+    counter=0
+    for (theTweetID,score) in queryResults:
+        counter+=1
+        topic_id, Q0, docno, rank, score, tag = topic_id, "Q0", score[1], counter, theTweetID, "myTag"#setting all variables
+        resultFile.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(topic_id, Q0, docno, rank, score, tag))#formating and writing to file
+    resultFile.write("\n\n")
 
 # make queries
 counter=0
@@ -134,7 +162,8 @@ queryList = []
 queryFileAddress = "topics_MB1-49.txt"#address of queries
 queryFile = open(queryFileAddress, "r")#open the query file
 line = queryFile.readline()#read line of query file
-resultFile = open("Results_E3.txt", "w")#open results file to write results
+resultFile = open("Results_E1.txt", "w")#open results file to write results
+qCount = 0
 while line:#loop through getting the queries and the query number
     line = queryFile.readline()#read a new line
     
@@ -147,6 +176,10 @@ while line:#loop through getting the queries and the query number
     if query:
         query = query.group(1)#set query from title
         query = tknzr.tokenize(query)#tokenize query string
-        WriteDownResults(query,topic_id,resultFile)#write to file the results.
+        #WriteDownResults(query,topic_id,resultFile)#write to file the results.#THIS IS FOR PART 3
+        print("Start of Query "+ str(qCount))
+        part1(query,topic_id,resultFile)#write to file the results. # THIS IS FOR PART 1
+        print("end of Query "+ str(qCount))
+        qCount +=1
 
 resultFile.close()
